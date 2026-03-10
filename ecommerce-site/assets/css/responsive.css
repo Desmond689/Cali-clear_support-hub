@@ -8,6 +8,12 @@
   }
   .navbar-main {
     position: relative;
+    flex-wrap: wrap;
+  }
+  .navbar-icons {
+    display: flex !important;
+    align-items: center;
+    gap: 1rem;
   }
   .navbar-links {
     display: none !important;
@@ -21,6 +27,7 @@
     padding: 1rem 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1001;
+    width: 100%;
   }
   .navbar-links.active {
     display: flex !important;
@@ -33,11 +40,36 @@
     padding: 0.8rem 1.5rem;
     width: 100%;
     border-bottom: 1px solid #f0f0f0;
+    color: #222;
   }
   .navbar-toggle {
-    display: flex;
+    display: flex !important;
     z-index: 1002;
     position: relative;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-left: auto;
+  }
+  .navbar-toggle span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #222;
+    border-radius: 2px;
+    transition: 0.3s;
+  }
+  .navbar-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+  .navbar-toggle.active span:nth-child(2) {
+    opacity: 0;
+  }
+  .navbar-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
   }
 }
 
@@ -50,6 +82,16 @@
   .navbar-main {
     position: relative;
     width: 100%;
+    flex-wrap: wrap;
+    padding: 0.5rem 1rem;
+  }
+  .navbar-logo {
+    flex: 1;
+  }
+  .navbar-icons {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
   }
   .navbar-links {
     display: none !important;
@@ -63,6 +105,7 @@
     padding: 1rem 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1001;
+    width: 100%;
   }
   .navbar-links.active {
     display: flex !important;
@@ -75,10 +118,35 @@
     padding: 0.8rem 1.5rem;
     width: 100%;
     border-bottom: 1px solid #f0f0f0;
+    color: #222;
   }
   .navbar-toggle {
-    display: flex;
+    display: flex !important;
     z-index: 1002;
     position: relative;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-left: auto;
+  }
+  .navbar-toggle span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #222;
+    border-radius: 2px;
+    transition: 0.3s;
+  }
+  .navbar-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+  .navbar-toggle.active span:nth-child(2) {
+    opacity: 0;
+  }
+  .navbar-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
   }
 }

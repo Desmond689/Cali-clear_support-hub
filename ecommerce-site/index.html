@@ -211,6 +211,10 @@ body {
     .then(res => res.text())
     .then(data => {
       document.getElementById('navbar-placeholder').innerHTML = data;
+      // Initialize navbar toggle after navbar is loaded
+      if (typeof setupNavbarToggle === 'function') {
+        setupNavbarToggle();
+      }
     })
     .catch(err => console.error('Error loading navbar:', err));
 </script>

@@ -316,6 +316,7 @@ fetch('components/navbar.html')
   .then(d => {
     document.getElementById('navbar-placeholder').innerHTML = d;
     if (typeof updateAuthUI === 'function') updateAuthUI();
+    if (typeof setupNavbarToggle === 'function') setupNavbarToggle();
   });
 </script>
 
