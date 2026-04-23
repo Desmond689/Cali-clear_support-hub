@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -16,43 +16,43 @@
   <style>
     /* Replace Font Awesome icons with Unicode symbols - no external dependencies */
     .fas { font-style: normal; font-weight: normal; margin-right: 4px; font-family: Arial, sans-serif; }
-    .fas.fa-leaf::before { content: "🍃"; font-style: normal; }
-    .fas.fa-sign-in-alt::before { content: "→"; font-style: normal; }
-    .fas.fa-bolt::before { content: "⚡"; font-style: normal; }
-    .fas.fa-info-circle::before { content: "ℹ"; font-style: normal; }
-    .fas.fa-bars::before { content: "☰"; font-style: normal; }
-    .fas.fa-chart-line::before { content: "📈"; font-style: normal; }
-    .fas.fa-box::before { content: "📦"; font-style: normal; }
-    .fas.fa-tags::before { content: "🏷"; font-style: normal; }
-    .fas.fa-shopping-cart::before { content: "🛒"; font-style: normal; }
-    .fas.fa-users::before { content: "👥"; font-style: normal; }
-    .fas.fa-chart-bar::before { content: "📊"; font-style: normal; }
-    .fas.fa-cog::before { content: "⚙"; font-style: normal; }
-    .fas.fa-sign-out-alt::before { content: "↪"; font-style: normal; }
+    .fas.fa-leaf::before { content: "ðŸƒ"; font-style: normal; }
+    .fas.fa-sign-in-alt::before { content: "â†’"; font-style: normal; }
+    .fas.fa-bolt::before { content: "âš¡"; font-style: normal; }
+    .fas.fa-info-circle::before { content: "â„¹"; font-style: normal; }
+    .fas.fa-bars::before { content: "â˜°"; font-style: normal; }
+    .fas.fa-chart-line::before { content: "ðŸ“ˆ"; font-style: normal; }
+    .fas.fa-box::before { content: "ðŸ“¦"; font-style: normal; }
+    .fas.fa-tags::before { content: "ðŸ·"; font-style: normal; }
+    .fas.fa-shopping-cart::before { content: "ðŸ›’"; font-style: normal; }
+    .fas.fa-users::before { content: "ðŸ‘¥"; font-style: normal; }
+    .fas.fa-chart-bar::before { content: "ðŸ“Š"; font-style: normal; }
+    .fas.fa-cog::before { content: "âš™"; font-style: normal; }
+    .fas.fa-sign-out-alt::before { content: "â†ª"; font-style: normal; }
     .fas.fa-dollar-sign::before { content: "$"; font-style: normal; }
-    .fas.fa-chart-area::before { content: "📉"; font-style: normal; }
-    .fas.fa-exclamation-triangle::before { content: "⚠"; font-style: normal; }
-    .fas.fa-chart-pie::before { content: "📈"; font-style: normal; }
+    .fas.fa-chart-area::before { content: "ðŸ“‰"; font-style: normal; }
+    .fas.fa-exclamation-triangle::before { content: "âš "; font-style: normal; }
+    .fas.fa-chart-pie::before { content: "ðŸ“ˆ"; font-style: normal; }
     .fas.fa-plus::before { content: "+"; font-style: normal; }
-    .fas.fa-spinner::before { content: "⟳"; animation: spin 1s linear infinite; }
-    .fas.fa-user::before { content: "👤"; font-style: normal; }
-    .fas.fa-edit::before { content: "✎"; font-style: normal; }
-    .fas.fa-trash::before { content: "🗑"; font-style: normal; }
-    .fas.fa-download::before { content: "⬇"; font-style: normal; }
-    .fas.fa-search::before { content: "🔍"; font-style: normal; }
-    .fas.fa-save::before { content: "💾"; font-style: normal; }
-    .fas.fa-truck::before { content: "🚚"; font-style: normal; }
-    .fas.fa-bell::before { content: "🔔"; font-style: normal; }
-    .fas.fa-list::before { content: "📋"; font-style: normal; }
-    .fas.fa-store::before { content: "🏪"; font-style: normal; }
-    .fas.fa-map-marker-alt::before { content: "📍"; font-style: normal; }
-    .fas.fa-receipt::before { content: "🧾"; font-style: normal; }
-    .fas.fa-eye::before { content: "👁"; font-style: normal; }
-    .fas.fa-external-link-alt::before { content: "🔗"; font-style: normal; }
-    .fas.fa-exclamation-circle::before { content: "❌"; font-style: normal; }
-    .fas.fa-envelope::before { content: "✉"; font-style: normal; }
-    .fas.fa-lock::before { content: "🔒"; font-style: normal; }
-    .fas.fa-shopping-bag::before { content: "🛍"; font-style: normal; }
+    .fas.fa-spinner::before { content: "âŸ³"; animation: spin 1s linear infinite; }
+    .fas.fa-user::before { content: "ðŸ‘¤"; font-style: normal; }
+    .fas.fa-edit::before { content: "âœŽ"; font-style: normal; }
+    .fas.fa-trash::before { content: "ðŸ—‘"; font-style: normal; }
+    .fas.fa-download::before { content: "â¬‡"; font-style: normal; }
+    .fas.fa-search::before { content: "ðŸ”"; font-style: normal; }
+    .fas.fa-save::before { content: "ðŸ’¾"; font-style: normal; }
+    .fas.fa-truck::before { content: "ðŸšš"; font-style: normal; }
+    .fas.fa-bell::before { content: "ðŸ””"; font-style: normal; }
+    .fas.fa-list::before { content: "ðŸ“‹"; font-style: normal; }
+    .fas.fa-store::before { content: "ðŸª"; font-style: normal; }
+    .fas.fa-map-marker-alt::before { content: "ðŸ“"; font-style: normal; }
+    .fas.fa-receipt::before { content: "ðŸ§¾"; font-style: normal; }
+    .fas.fa-eye::before { content: "ðŸ‘"; font-style: normal; }
+    .fas.fa-external-link-alt::before { content: "ðŸ”—"; font-style: normal; }
+    .fas.fa-exclamation-circle::before { content: "âŒ"; font-style: normal; }
+    .fas.fa-envelope::before { content: "âœ‰"; font-style: normal; }
+    .fas.fa-lock::before { content: "ðŸ”’"; font-style: normal; }
+    .fas.fa-shopping-bag::before { content: "ðŸ›"; font-style: normal; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
   
@@ -1204,7 +1204,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
               <div>
                 <label style="font-size:13px;color:#ccc;">Icon (emoji)</label>
-                <input type="text" id="pm-icon" placeholder="e.g. 💳" style="width:100%;padding:10px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;margin:4px 0 10px;box-sizing:border-box;">
+                <input type="text" id="pm-icon" placeholder="e.g. ðŸ’³" style="width:100%;padding:10px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;margin:4px 0 10px;box-sizing:border-box;">
               </div>
               <div>
                 <label style="font-size:13px;color:#ccc;">Sort Order</label>
@@ -1399,8 +1399,8 @@
               <label>Currency</label>
               <select id="setting-currency">
                 <option value="USD" selected>USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
+                <option value="EUR">EUR (â‚¬)</option>
+                <option value="GBP">GBP (Â£)</option>
               </select>
             </div>
             <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
@@ -1678,7 +1678,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#333;margin:15px 0 0;">
           <div style="background:#1e1e1e;padding:14px 20px;">
             <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px;">Full Name</div>
-            <div style="color:#fff;font-size:14px;" id="om-customer-name">—</div>
+            <div style="color:#fff;font-size:14px;" id="om-customer-name">â€”</div>
           </div>
           <div style="background:#1e1e1e;padding:14px 20px;">
             <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px;">Email</div>
@@ -1686,11 +1686,11 @@
           </div>
           <div style="background:#1e1e1e;padding:14px 20px;">
             <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px;">Address</div>
-            <div style="color:#fff;font-size:14px;" id="om-customer-address">—</div>
+            <div style="color:#fff;font-size:14px;" id="om-customer-address">â€”</div>
           </div>
           <div style="background:#1e1e1e;padding:14px 20px;">
             <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px;">City / ZIP</div>
-            <div style="color:#fff;font-size:14px;" id="om-customer-city-zip">—</div>
+            <div style="color:#fff;font-size:14px;" id="om-customer-city-zip">â€”</div>
           </div>
           <div style="background:#1e1e1e;padding:14px 20px;">
             <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px;">Order Total</div>
@@ -2088,7 +2088,7 @@
             ? '<span style="background:#2e7d32;color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;">Active</span>'
             : '<span style="background:#c62828;color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;">Inactive</span>';
           return '<tr>' +
-            '<td style="font-size:24px;text-align:center;">' + (pm.icon || '💳') + '</td>' +
+            '<td style="font-size:24px;text-align:center;">' + (pm.icon || 'ðŸ’³') + '</td>' +
             '<td><strong>' + pm.name + '</strong></td>' +
             '<td><code style="color:#ff6f61;">' + pm.slug + '</code></td>' +
             '<td style="font-size:12px;line-height:1.6;">' + detailsStr + '</td>' +
@@ -2823,13 +2823,13 @@
 
     // ---- Tracking modal stage definitions ----
     var ORDER_STAGES = [
-      { key: 'created',          label: 'Order\nPlaced',      icon: '📋' },
-      { key: 'paid',             label: 'Payment\nConfirmed', icon: '💳' },
-      { key: 'packed',           label: 'Packed',             icon: '📦' },
-      { key: 'shipped',          label: 'Shipped',            icon: '🚚' },
-      { key: 'in_transit',       label: 'In Transit',         icon: '✈️'  },
-      { key: 'out_for_delivery', label: 'Out for\nDelivery',  icon: '🏠' },
-      { key: 'delivered',        label: 'Delivered',          icon: '✅' }
+      { key: 'created',          label: 'Order\nPlaced',      icon: 'ðŸ“‹' },
+      { key: 'paid',             label: 'Payment\nConfirmed', icon: 'ðŸ’³' },
+      { key: 'packed',           label: 'Packed',             icon: 'ðŸ“¦' },
+      { key: 'shipped',          label: 'Shipped',            icon: 'ðŸšš' },
+      { key: 'in_transit',       label: 'In Transit',         icon: 'âœˆï¸'  },
+      { key: 'out_for_delivery', label: 'Out for\nDelivery',  icon: 'ðŸ ' },
+      { key: 'delivered',        label: 'Delivered',          icon: 'âœ…' }
     ];
 
     var STATUS_COLORS = {
@@ -2853,13 +2853,13 @@
       // Header
       document.getElementById('om-order-id-display').textContent = 'Order #' + order.id;
       document.getElementById('om-order-date').textContent = new Date(order.created_at).toLocaleString();
-      document.getElementById('om-customer-name').textContent = order.customer_name || '—';
+      document.getElementById('om-customer-name').textContent = order.customer_name || 'â€”';
       document.getElementById('om-customer-email').textContent = order.email;
-      document.getElementById('om-customer-address').textContent = order.shipping_address || '—';
+      document.getElementById('om-customer-address').textContent = order.shipping_address || 'â€”';
       document.getElementById('om-customer-city-zip').textContent = (order.city || '') + ' ' + (order.zip_code || '');
       document.getElementById('om-total').textContent = '$' + parseFloat(order.total).toFixed(2);
-      document.getElementById('om-carrier-display').textContent = order.carrier ? order.carrier.toUpperCase() : '—';
-      document.getElementById('om-tracking-display').textContent = order.tracking_number || '—';
+      document.getElementById('om-carrier-display').textContent = order.carrier ? order.carrier.toUpperCase() : 'â€”';
+      document.getElementById('om-tracking-display').textContent = order.tracking_number || 'â€”';
       document.getElementById('om-customer-tracking-link').href = '/tracking.html?order=' + order.id;
 
       // Status badge
@@ -2892,7 +2892,7 @@
       for (var j = 0; j < items.length; j++) {
         var item = items[j];
         itemsHtml += '<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #2a2a2a;">';
-        itemsHtml += '<span style="color:#e0e0e0;">' + item.name + ' <span style="color:#888;">×' + item.quantity + '</span></span>';
+        itemsHtml += '<span style="color:#e0e0e0;">' + item.name + ' <span style="color:#888;">Ã—' + item.quantity + '</span></span>';
         itemsHtml += '<span style="color:#ff6f61;">$' + parseFloat(item.price * item.quantity).toFixed(2) + '</span>';
         itemsHtml += '</div>';
       }
@@ -2992,7 +2992,7 @@
       };
       try {
         await apiRequest('/admin/orders/' + id + '/status', { method: 'PUT', body: statusData });
-        showNotification('Order updated successfully ✓', 'success');
+        showNotification('Order updated successfully âœ“', 'success');
         openOrderTrackingModal(id);
         loadOrders();
       } catch (error) {
@@ -3593,11 +3593,7 @@
               unread: 0,
               hasProof: false
             };
-          }
-          if (m.created_at > conversations[m.customer_email].lastDate) {
-            conversations[m.customer_email].lastMessage = m.message;
-            conversations[m.customer_email].lastDate = m.created_at;
-          }
+    }
           if (m.order_id && !conversations[m.customer_email].orderId) {
             conversations[m.customer_email].orderId = m.order_id;
           }
@@ -3622,11 +3618,11 @@
         
         conversationsList.innerHTML = sorted.map(conv => {
           var isActive = currentConversationEmail === conv.email;
-          var typeIcon = conv.hasProof ? '??' : conv.orderId ? '??' : '??';
+          var typeIcon = conv.hasProof ? 'ðŸ“¸' : conv.orderId ? 'ðŸ›’' : 'ðŸ’¬';
           return `<div onclick="selectConversation('${conv.email}')" 
-               style="padding:12px;border-bottom:1px solid #333;cursor:pointer;transition:0.2s;background:${isActive ? '#333' : 'transparent'};"
-               onmouseover="this.style.background='#2a2a2a'" 
-               onmouseout="this.style.background='${isActive ? '#333' : 'transparent'}'">
+                 style="padding:12px;border-bottom:1px solid #333;cursor:pointer;transition:0.2s;background:${isActive ? '#333' : 'transparent'};"
+                 onmouseover="this.style.background='#2a2a2a'" 
+                 onmouseout="this.style.background='${isActive ? '#333' : 'transparent'}'">
             <div style="font-weight:600;color:#fff;display:flex;justify-content:space-between;align-items:center;">
               <span>${typeIcon} ${escapeHtml(conv.name || conv.email)}</span>
               ${conv.unread > 0 ? `<span style="background:#ff6f61;color:#fff;border-radius:50%;min-width:20px;height:20px;text-align:center;line-height:20px;font-size:11px;">${conv.unread}</span>` : ''}
@@ -3636,12 +3632,16 @@
             ${conv.orderId ? `<div style="font-size:10px;color:#ff6f61;margin-top:2px;">Order #${conv.orderId}</div>` : ''}
           </div>`;
         }).join('');
+        
+        // Refresh currently viewed conversation if any
+        if (currentConversationEmail) {
+          renderConversation(currentConversationEmail);
+        }
       } catch (error) {
         console.error('Error loading messages:', error);
         showNotification('Error loading messages', 'error');
       }
     }
-
     async function selectConversation(email) {
       currentConversationEmail = email;
       
@@ -3998,16 +3998,18 @@
       replyInput.value = '';
       replyInput.disabled = true;
       
-      // Show reply immediately in the chat (optimistic update)
+      // Show reply immediately in the chat (optimistic update) - RIGHT ALIGNED LIKE WHATSAPP
       const chatView = document.getElementById('chat-view-messages');
-      const tempReplyHtml = `<div style="text-align:left;margin:8px 0;">
-        <div style="background:#e0e0e0;color:#333;padding:8px 12px;border-radius:12px;display:inline-block;max-width:75%;word-wrap:break-word;opacity:0.7;">
-          <span style="font-size:11px;color:#888;display:block;margin-bottom:4px;">🧑‍💼 Admin</span>
-          ${escapeHtml(reply).replace(/\n/g, '<br>')}
-        </div>
-        <div style="font-size:11px;color:#999;margin-top:4px;text-align:left;">Sending...</div>
-      </div>`;
-      chatView.innerHTML += tempReplyHtml;
+      const tempId = 'temp-reply-' + Date.now();
+      const tempReplyHtml = `
+        <div id="${tempId}" class="chat-message chat-message-admin" style="text-align:right;margin:8px 0;">
+          <div style="background:#4caf50;color:#fff;padding:10px 14px;border-radius:12px 12px 0 12px;display:inline-block;max-width:75%;word-wrap:break-word;font-size:13px;text-align:left;">
+            <span style="font-size:11px;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">ðŸ§‘â€ðŸ’¼ Admin</span>
+            ${escapeHtml(reply).replace(/\n/g, '<br>')}
+          </div>
+          <div style="font-size:11px;color:#999;margin-top:3px;text-align:right;">Sending...</div>
+        </div>`;
+      chatView.insertAdjacentHTML('beforeend', tempReplyHtml);
       chatView.scrollTop = chatView.scrollHeight;
       
       try {
@@ -4018,16 +4020,23 @@
         
         showNotification('Reply sent', 'success');
         replyInput.disabled = false;
-        // Refresh immediately to get the actual saved message
-        await loadMessages();
-        selectConversation(currentConversationEmail);
+        // Update the temporary message to show "Sent" instead of reloading everything
+        const tempMsg = document.getElementById(tempId);
+        if (tempMsg) {
+          const sendingDiv = tempMsg.querySelector('div:last-child');
+          if (sendingDiv) {
+            sendingDiv.textContent = 'Sent ' + formatTime(new Date().toISOString());
+          }
+          // Mark as no longer temporary
+          tempMsg.id = '';
+        }
       } catch (error) {
         console.error('Error sending reply:', error);
         showNotification('Error sending reply', 'error');
         replyInput.disabled = false;
-        // Reload to show the actual state
-        await loadMessages();
-        selectConversation(currentConversationEmail);
+        // Remove the temporary message on error
+        const tempMsg = document.getElementById(tempId);
+        if (tempMsg) tempMsg.remove();
       }
     }
 

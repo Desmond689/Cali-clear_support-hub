@@ -23,6 +23,11 @@ function openChatPanel() {
 
   // Load chat history initially
   loadChatHistory();
+
+  // Start polling for new messages every 3 seconds
+  if (!chatPollInterval) {
+    chatPollInterval = setInterval(loadChatHistory, 3000);
+  }
 }
 
 function notifyAdmin(orderInfo) {
@@ -206,22 +211,26 @@ function initChat() {
       chatName = prompt('What is your name?') || 'Guest';
       localStorage.setItem('user_email', chatEmail);
       localStorage.setItem('user_name', chatName);
-      // Join chat room
       if (socket && chatEmail) {
         socket.emit('join_chat', { email: chatEmail });
       }
     }
 
-    // Send to backend via socket
+    // Always show message immediately
+    appendUserMessage(text);
+
+    // Send to backend
     if (socket) {
-      socket.emit('send_message', {
-        email: chatEmail,
-        name: chatName,
-        message: text
-      });
+      socket.emit('send_message', { email: chatEmail, name: chatName, message: text });
     } else {
-      // Fallback: append locally so user still sees their message
-      appendUserMessage(text);
+      // REST API fallback
+      fetch('/api/messages/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: chatEmail, name: chatName, message: text, message_type: 'text' })
+      }).then(r => r.json()).then(j => {
+        if (j && j.status !== 'success') console.error('[CHAT] Failed:', j.message);
+      }).catch(e => console.error('[CHAT] Error sending:', e));
     }
     e.target.value = '';
   });
@@ -388,12 +397,12 @@ function renderBotMessage(msg) {
 function renderAdminReply(msg) {
   const text = escapeHtml(msg.admin_reply);
   const time = formatChatTime(msg.replied_at);
-  return `<div style="margin:8px 0;">
-    <div style="background:#e0e0e0;color:#333;padding:10px 14px;border-radius:12px;display:inline-block;max-width:75%;word-wrap:break-word;font-size:13px;">
-      <span style="font-size:11px;color:#888;display:block;margin-bottom:4px;">🧑‍💼 Admin</span>
+  return `<div class="chat-message chat-message-admin" style="text-align:right;margin:8px 0;">
+    <div style="background:#4caf50;color:#fff;padding:10px 14px;border-radius:12px 12px 0 12px;display:inline-block;max-width:75%;word-wrap:break-word;font-size:13px;text-align:left;">
+      <span style="font-size:11px;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">🧑‍💼 Admin</span>
       ${text}
     </div>
-    <div style="font-size:11px;color:#666;margin-top:3px;">${time}</div>
+    <div style="font-size:11px;color:#666;margin-top:3px;text-align:right;">${time}</div>
   </div>`;
 }
 
@@ -564,18 +573,22 @@ function findActiveOrder(thread) {
 function appendUserMessage(text) {
   const messages = document.getElementById('chat-messages');
   if (!messages) return;
-  messages.innerHTML += `<div style="text-align:right;margin:8px 0;">
-    <div style="background:#ff6f61;color:#fff;padding:10px 14px;border-radius:12px;display:inline-block;max-width:75%;word-wrap:break-word;font-size:13px;">${escapeHtml(text)}</div>
-  </div>`;
+  messages.insertAdjacentHTML('beforeend', `
+    <div class="chat-message chat-message-user">
+      <div class="chat-bubble-message">${escapeHtml(text)}</div>
+      <div class="time">${formatChatTime(new Date().toISOString())}</div>
+    </div>`);
   messages.scrollTop = messages.scrollHeight;
 }
 
 function appendBotMessage(text) {
   const messages = document.getElementById('chat-messages');
   if (!messages) return;
-  messages.innerHTML += `<div style="margin:8px 0;">
-    <div style="background:#2a2a2a;color:#ccc;padding:10px 14px;border-radius:12px;display:inline-block;max-width:85%;word-wrap:break-word;font-size:13px;">🤖 ${escapeHtml(text)}</div>
-  </div>`;
+  messages.insertAdjacentHTML('beforeend', `
+    <div class="chat-message chat-message-bot">
+      <div class="chat-bubble-message">🤖 ${escapeHtml(text)}</div>
+      <div class="time">${formatChatTime(new Date().toISOString())}</div>
+    </div>`);
   messages.scrollTop = messages.scrollHeight;
 }
 

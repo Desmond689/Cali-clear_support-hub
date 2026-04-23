@@ -701,3 +701,108 @@ body {
 	.navbar-toggle { display: flex !important; z-index: 1002; position: relative; flex-direction: column; gap: 4px; background: none; border: none; cursor: pointer; padding: 8px; margin-left: auto; }
 	.navbar-toggle span { display: block; width: 24px; height: 3px; background: #222; border-radius: 2px; transition: 0.3s; }
 }
+
+/* Chat Messages */
+#chat-messages,
+#chat-view-messages,
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  overflow-y: auto;
+  height: 400px;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+.chat-message-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-message-bot,
+.chat-message-status {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.chat-message-admin {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-bubble-message {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.chat-message-user .chat-bubble-message {
+  background: #4caf50;
+  color: #fff;
+  border-radius: 12px 12px 0 12px;
+}
+
+.chat-message-bot .chat-bubble-message {
+  background: #333;
+  color: #ddd;
+  border-radius: 12px 12px 12px 0;
+}
+
+.chat-message-admin .chat-bubble-message {
+  background: #4caf50;
+  color: #fff;
+  border-radius: 12px 12px 0 12px;
+}
+
+.chat-message-status .chat-bubble-message {
+  background: #1b5e20;
+  color: #c8e6c9;
+  border: 1px solid #388e3c;
+  border-radius: 12px 12px 12px 0;
+}
+
+.time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 3px;
+}
+
+.chat-message-user .time,
+.chat-message-admin .time {
+  text-align: right;
+}
+  color: #ddd;
+  border-radius: 12px 12px 12px 0;
+}
+
+.chat-message-admin .chat-bubble-message {
+  background: #4caf50;
+  color: #fff;
+  border-radius: 12px 12px 0 12px;
+}
+
+.chat-message-status .chat-bubble-message {
+  background: #1b5e20;
+  color: #c8e6c9;
+  border: 1px solid #388e3c;
+  border-radius: 12px 12px 12px 0;
+}
+
+.time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 3px;
+}
+
+.chat-message-user .time,
+.chat-message-admin .time {
+  text-align: right;
+}
