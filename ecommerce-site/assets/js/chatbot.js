@@ -104,7 +104,7 @@ function initChat() {
   if (!bubble || !panel || !input || !messages) return;
 
   // Initialize SocketIO connection
-  if (!socket) {
+  if (typeof io !== 'undefined' && !socket) {
     socket = io();
     
     socket.on('connect', () => {
@@ -157,6 +157,8 @@ function initChat() {
         }
       }
     });
+  } else if (typeof io === 'undefined') {
+    console.warn('[CHAT] SocketIO not loaded, real-time features disabled');
   }
 
   // Restore identity from localStorage

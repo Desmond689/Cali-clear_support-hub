@@ -2773,6 +2773,7 @@
         if (status) endpoint += '&status=' + status;
 
         var data = await apiRequest(endpoint);
+        console.log('Admin orders API response:', data);
         var orders = data.orders || [];
 
         if (orders.length === 0) {
