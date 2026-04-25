@@ -10,10 +10,12 @@ from database.models import (
 from utils.responses import success_response, error_response
 from middleware.admin_required import admin_required
 from services.email_service import send_email
-from flask_socketio import emit
 from datetime import datetime
 import json
 import base64
+
+# Import socketio for real-time emits
+from app import socketio
 
 bp = Blueprint("messages", __name__, url_prefix="/api/messages")
 
@@ -314,12 +316,20 @@ def reply_message(msg_id):
     msg.replied_at = datetime.utcnow()
     db.session.commit()
 
-    # Emit real-time notification to user
-    emit('new_message', {
+    # Emit real-time notification to user via SocketIO
+    # Use both event names for compatibility
+    reply_data = {
         'sender': 'admin',
         'message': reply,
-        'timestamp': msg.replied_at.isoformat()
-    }, room=msg.customer_email)
+        'admin_reply': reply,
+        'timestamp': msg.replied_at.isoformat(),
+        'replied_at': msg.replied_at.isoformat()
+    }
+    
+    # Emit to the customer's room
+    print(f"[SOCKETIO] Emitting admin reply to room {msg.customer_email}: {reply}")
+    socketio.emit('new_message', reply_data, room=msg.customer_email)
+    socketio.emit('admin_reply', reply_data, room=msg.customer_email)
 
     # Send reply email to customer (best-effort, don't fail on email error)
     try:
@@ -387,6 +397,15 @@ def admin_verify_payment(order_id):
     db.session.add(bot_msg)
     db.session.commit()
 
+    # Emit real-time status update to customer via SocketIO
+    print(f"[SOCKETIO] Emitting payment status update to {order.email}: {action}")
+    socketio.emit('new_message', {
+        'sender': 'bot',
+        'message': bot_msg_text,
+        'message_type': 'status_update',
+        'timestamp': bot_msg.replied_at.isoformat()
+    }, room=order.email)
+
     # Email notification
     send_email(
         order.email,
@@ -442,6 +461,15 @@ def send_payment_instructions():
     order.payment_status = "pending"
     order.status = "payment_instructions_sent"
     db.session.commit()
+
+    # Emit real-time payment instructions to customer via SocketIO
+    print(f"[SOCKETIO] Emitting payment instructions to {order.email}")
+    socketio.emit('new_message', {
+        'sender': 'bot',
+        'message': message_body,
+        'message_type': 'payment_details',
+        'timestamp': instr_msg.replied_at.isoformat()
+    }, room=order.email)
 
     # Notify customer by email (optional)
     send_email(

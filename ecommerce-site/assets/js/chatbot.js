@@ -6,6 +6,13 @@ let lastMessageCount = -1; // use -1 to ensure first load is always processed
 let firstLoadDone = false;
 let socket = null;
 
+function ensureJoinedRoom() {
+  // Ensure the user is joined to their chat room
+  if (chatEmail && socket && socket.connected) {
+    socket.emit('join_chat', { email: chatEmail });
+  }
+}
+
 function openChatPanel() {
   const panel = document.getElementById('chat-panel');
   const input = document.getElementById('chat-input');
@@ -17,9 +24,7 @@ function openChatPanel() {
   if (input) input.focus();
 
   // Join chat room if email available
-  if (chatEmail && socket) {
-    socket.emit('join_chat', { email: chatEmail });
-  }
+  ensureJoinedRoom();
 
   // Load chat history initially
   loadChatHistory();
@@ -27,6 +32,28 @@ function openChatPanel() {
   // Start polling for new messages every 3 seconds
   if (!chatPollInterval) {
     chatPollInterval = setInterval(loadChatHistory, 3000);
+  }
+}
+
+// Background poller for messages - runs even when chat is closed
+// Checks every 10 seconds if user is identified but not actively polling
+let backgroundMessagePollInterval = null;
+function startBackgroundMessagePoll() {
+  if (backgroundMessagePollInterval) return;
+  backgroundMessagePollInterval = setInterval(() => {
+    if (chatEmail && (!chatPollInterval || chatPollInterval === null)) {
+      // User is identified but chat panel not open - quick poll for new messages
+      // Only fetch if there's an active order or recent activity
+      if (window._chatOrderId || (localStorage.getItem('last_order_id'))) {
+        loadChatHistory();
+      }
+    }
+  }, 10000);
+}
+function stopBackgroundMessagePoll() {
+  if (backgroundMessagePollInterval) {
+    clearInterval(backgroundMessagePollInterval);
+    backgroundMessagePollInterval = null;
   }
 }
 
@@ -65,6 +92,9 @@ function openChatForOrder(orderId, email, name, paymentMethod, productName, pric
   localStorage.setItem('user_name', chatName);
 
   openChatPanel();
+
+  // Ensure we're joined to the chat room for real-time messages
+  ensureJoinedRoom();
 
   if (orderId) window._chatOrderId = orderId;
   const orderInfo = {
@@ -110,69 +140,110 @@ function initChat() {
 
   // Initialize SocketIO connection
   if (typeof io !== 'undefined' && !socket) {
-    socket = io();
+    socket = io({
+      reconnectionDelay: 1000,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling']
+    });
     
     socket.on('connect', () => {
       console.log('[CHAT] Socket connected');
       // Join room if we have email
       if (chatEmail) {
         socket.emit('join_chat', { email: chatEmail });
+        console.log('[CHAT] Joined room for email:', chatEmail);
       }
     });
     
     socket.on('disconnect', () => {
-      console.log('[CHAT] Socket disconnected');
+      console.log('[CHAT] Socket disconnected - will attempt to reconnect');
     });
-    
-    // Listen for new messages from admin
-    socket.on('new_message', (data) => {
-      console.log('[CHAT] New message received:', data);
-      if (data.sender === 'admin' && chatEmail) {
-        // Create message object for rendering
-        const msg = {
-          admin_reply: data.message,
-          replied_at: data.timestamp
-        };
-        
-        // Append the admin reply directly to chat
-        const messages = document.getElementById('chat-messages');
-        if (messages) {
-          messages.innerHTML += renderAdminReply(msg);
-          messages.scrollTop = messages.scrollHeight;
-          lastMessageCount++; // Increment count to avoid unnecessary reloads
-        }
-        
-        // Show notification if chat is closed
-        const panel = document.getElementById('chat-panel');
-        if (panel && panel.classList.contains('hidden')) {
-          if (typeof showToast === 'function') {
-            showToast('💬 New message from admin!');
-          }
-          // Request notification permission if not already granted
-          if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-          }
-          // Show browser notification
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Cali Clear Support', {
-              body: 'You have a new message from our support team.',
-              icon: '/favicon.ico'
-            });
-          }
-        }
+
+    socket.on('reconnect', () => {
+      console.log('[CHAT] Socket reconnected');
+      if (chatEmail) {
+        socket.emit('join_chat', { email: chatEmail });
+        console.log('[CHAT] Re-joined room after reconnection');
       }
     });
+    
+    // Listen for new messages from admin - both 'new_message' and 'admin_reply' events
+    socket.on('new_message', (data) => {
+      console.log('[CHAT] New message received via new_message event:', data);
+      handleAdminMessage(data);
+    });
+
+    // Also listen for admin_reply event (alternative event name)
+    socket.on('admin_reply', (data) => {
+      console.log('[CHAT] Admin reply received via admin_reply event:', data);
+      handleAdminMessage(data);
+    });
+
+    // Handle admin messages
+    function handleAdminMessage(data) {
+      if (!chatEmail) return;
+      
+      const message = data.message || data.admin_reply || '';
+      const timestamp = data.timestamp || data.replied_at || new Date().toISOString();
+      
+      // Create message object for rendering
+      const msg = {
+        admin_reply: message,
+        replied_at: timestamp
+      };
+      
+      // Append the admin reply directly to chat
+      const messagesDiv = document.getElementById('chat-messages');
+      if (messagesDiv) {
+        messagesDiv.innerHTML += renderAdminReply(msg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        lastMessageCount++; // Increment count to avoid unnecessary reloads
+        console.log('[CHAT] Admin message displayed');
+      }
+      
+      // Show notification if chat is closed
+      const panel = document.getElementById('chat-panel');
+      if (panel && panel.classList.contains('hidden')) {
+        if (typeof showToast === 'function') {
+          showToast('💬 New message from admin!');
+        }
+        // Request notification permission if not already granted
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+        // Show browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Cali Clear Support', {
+            body: 'You have a new message from our support team.',
+            icon: '/favicon.ico'
+          });
+        }
+      }
+    }
   } else if (typeof io === 'undefined') {
     console.warn('[CHAT] SocketIO not loaded, real-time features disabled');
   }
 
-  // Restore identity from localStorage
-  chatEmail = chatEmail || localStorage.getItem('user_email') || null;
-  chatName = chatName || localStorage.getItem('user_name') || null;
+// Restore identity from localStorage
+chatEmail = chatEmail || localStorage.getItem('user_email') || null;
+chatName = chatName || localStorage.getItem('user_name') || null;
 
-  // Remove any existing listeners (avoid duplicates)
-  bubble.replaceWith(bubble.cloneNode(true));
-  const newBubble = document.getElementById('chat-bubble');
+// If we have email and socket is connected/connecting, join room immediately
+if (chatEmail && socket) {
+  if (socket.connected) {
+    socket.emit('join_chat', { email: chatEmail });
+  } else {
+    // Wait for connection then join
+    socket.once('connect', () => {
+      socket.emit('join_chat', { email: chatEmail });
+    });
+  }
+}
+
+// Remove any existing listeners (avoid duplicates)
+bubble.replaceWith(bubble.cloneNode(true));
+const newBubble = document.getElementById('chat-bubble');
   const closeButton = document.getElementById('chat-close');
 
   newBubble.addEventListener('click', () => {
@@ -613,3 +684,6 @@ window.loadChatHistory = loadChatHistory;
 
 // Initialize - only once via DOMContentLoaded
 document.addEventListener('DOMContentLoaded', initChat);
+
+// Start background polling for message updates (catches any missed real-time messages)
+startBackgroundMessagePoll();

@@ -3744,6 +3744,17 @@
             <button onclick="viewProofScreenshot(${msg.id})" style="background:#2e7d32;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">?? View Screenshot</button>
           </div>`;
         }
+        
+        // Display admin reply if it exists
+        if (msg.admin_reply) {
+          html += `<div style="text-align:left;margin:8px 0;">
+            <div style="background:#4caf50;color:#fff;padding:10px 14px;border-radius:12px 12px 0 12px;display:inline-block;max-width:75%;word-wrap:break-word;">
+              <span style="font-size:11px;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">ðŸ§'â€ðŸ'¼ Admin</span>
+              ${escapeHtml(msg.admin_reply).replace(/\n/g, '<br>')}
+            </div>
+            <div style="font-size:11px;color:#999;margin-top:4px;text-align:left;">${formatTime(msg.replied_at || msg.created_at)}</div>
+          </div>`;
+        }
       });
       
       html += '</div>';
@@ -4038,16 +4049,10 @@
         
         showNotification('Reply sent', 'success');
         replyInput.disabled = false;
-        // Update the temporary message to show "Sent" instead of reloading everything
-        const tempMsg = document.getElementById(tempId);
-        if (tempMsg) {
-          const sendingDiv = tempMsg.querySelector('div:last-child');
-          if (sendingDiv) {
-            sendingDiv.textContent = 'Sent ' + formatTime(new Date().toISOString());
-          }
-          // Mark as no longer temporary
-          tempMsg.id = '';
-        }
+        
+        // Reload the conversation immediately to show the persisted reply from database
+        renderConversation(currentConversationEmail);
+        
       } catch (error) {
         console.error('Error sending reply:', error);
         showNotification('Error sending reply', 'error');
