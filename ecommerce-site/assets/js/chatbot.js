@@ -26,29 +26,36 @@ function openChatPanel() {
   // Join chat room if email available
   ensureJoinedRoom();
 
+  // Stop background polling when chat opens
+  if (backgroundMessagePollInterval) {
+    clearInterval(backgroundMessagePollInterval);
+    backgroundMessagePollInterval = null;
+    console.log('[CHAT] Stopped background polling');
+  }
+
   // Load chat history initially
   loadChatHistory();
 
-  // Start polling for new messages every 3 seconds
+  // Start polling for new messages every 2 seconds when chat is OPEN (more aggressive)
   if (!chatPollInterval) {
-    chatPollInterval = setInterval(loadChatHistory, 3000);
+    console.log('[CHAT] Starting active polling (2s interval)');
+    chatPollInterval = setInterval(loadChatHistory, 2000);
   }
 }
 
 // Background poller for messages - runs even when chat is closed
-// Checks every 10 seconds if user is identified but not actively polling
+// Checks every 5 seconds if user is identified but not actively polling
 let backgroundMessagePollInterval = null;
 function startBackgroundMessagePoll() {
   if (backgroundMessagePollInterval) return;
+  console.log('[CHAT] Starting background message polling (5s interval)');
   backgroundMessagePollInterval = setInterval(() => {
     if (chatEmail && (!chatPollInterval || chatPollInterval === null)) {
-      // User is identified but chat panel not open - quick poll for new messages
-      // Only fetch if there's an active order or recent activity
-      if (window._chatOrderId || (localStorage.getItem('last_order_id'))) {
-        loadChatHistory();
-      }
+      // User is identified but chat panel not open - poll for new messages
+      console.log('[CHAT] Background poll - checking for new messages');
+      loadChatHistory();
     }
-  }, 10000);
+  }, 5000);
 }
 function stopBackgroundMessagePoll() {
   if (backgroundMessagePollInterval) {
@@ -176,6 +183,14 @@ function initChat() {
       console.log('[CHAT] Admin join confirmation:', data);
     });
     
+    socket.on('message_sent', (data) => {
+      console.log('[CHAT] Message confirmed sent by backend:', data);
+    });
+    
+    socket.on('new_message_ack', (data) => {
+      console.log('[CHAT] New message acknowledgment:', data);
+    });
+    
     // Listen for new messages from admin - both 'new_message' and 'admin_reply' events
     socket.on('new_message', (data) => {
       console.log('[CHAT] New message received via new_message event:', data);
@@ -186,6 +201,14 @@ function initChat() {
     socket.on('admin_reply', (data) => {
       console.log('[CHAT] Admin reply received via admin_reply event:', data);
       handleAdminMessage(data);
+    });
+    
+    // Listen for acknowledgment that user's message was saved
+    socket.on('message_sent', (data) => {
+      console.log('[CHAT] Message confirmed saved by backend:', data);
+      // Force chat history reload to show the saved message
+      lastMessageCount = -1;
+      loadChatHistory();
     });
 
     // Handle admin messages
@@ -220,12 +243,19 @@ function initChat() {
       loadChatHistory();
     }
   } else if (typeof io === 'undefined') {
-    console.warn('[CHAT] SocketIO not loaded, real-time features disabled');
+    console.warn('[CHAT] SocketIO not loaded from CDN - socket.io might be blocked. Using polling fallback');
   }
 
 // Restore identity from localStorage
 chatEmail = chatEmail || localStorage.getItem('user_email') || null;
 chatName = chatName || localStorage.getItem('user_name') || null;
+
+// IMPORTANT: Ensure polling is ALWAYS active as a fallback
+// Even if socket.io is available, polling ensures messages are never missed
+if (!chatPollInterval && chatEmail) {
+  console.log('[CHAT] Starting background polling for messages');
+  startBackgroundMessagePoll();
+}
 
 // If we have email and socket is connected/connecting, join room immediately
 if (chatEmail && socket) {
@@ -266,7 +296,18 @@ const newBubble = document.getElementById('chat-bubble');
 
   if (closeButton) {
     closeButton.addEventListener('click', () => {
+      console.log('[CHAT] Closing chat panel');
       panel.classList.add('hidden');
+      // Stop active polling when chat is closed
+      if (chatPollInterval) {
+        clearInterval(chatPollInterval);
+        chatPollInterval = null;
+        console.log('[CHAT] Stopped active polling');
+      }
+      // Start background polling if not already running
+      if (!backgroundMessagePollInterval && chatEmail) {
+        startBackgroundMessagePoll();
+      }
     });
   }
 
@@ -287,19 +328,43 @@ const newBubble = document.getElementById('chat-bubble');
 
     // Always show message immediately
     appendUserMessage(text);
+    console.log('[CHAT] Message appended for display:', text);
+    lastMessageCount = -1; // Force refresh to show sent message
 
-    // Send to backend
-    if (socket) {
-      socket.emit('send_message', { email: chatEmail, name: chatName, message: text });
+    // Send to backend via socket or REST API
+    const sendData = { email: chatEmail, name: chatName, message: text, message_type: 'text' };
+    
+    if (socket && socket.connected) {
+      console.log('[CHAT] Sending via socket:', sendData);
+      socket.emit('send_message', sendData);
     } else {
-      // REST API fallback
-      fetch('/api/messages/', {
+      // REST API fallback - remove trailing slash from endpoint
+      console.log('[CHAT] Socket not available, using REST API fallback');
+      fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: chatEmail, name: chatName, message: text, message_type: 'text' })
-      }).then(r => r.json()).then(j => {
-        if (j && j.status !== 'success') console.error('[CHAT] Failed:', j.message);
-      }).catch(e => console.error('[CHAT] Error sending:', e));
+        body: JSON.stringify(sendData)
+      })
+        .then(r => {
+          console.log('[CHAT] Response status:', r.status, r.statusText);
+          return r.json();
+        })
+        .then(j => {
+          if (j && j.status === 'success') {
+            console.log('[CHAT] Message sent successfully:', j);
+            // Force reload after a small delay to ensure DB has saved it
+            setTimeout(() => {
+              console.log('[CHAT] Reloading chat history after send');
+              lastMessageCount = -1;
+              loadChatHistory();
+            }, 300);
+          } else {
+            console.error('[CHAT] Failed to send:', j);
+          }
+        })
+        .catch(e => {
+          console.error('[CHAT] Error sending message:', e);
+        });
     }
     e.target.value = '';
   });
@@ -310,23 +375,39 @@ const newBubble = document.getElementById('chat-bubble');
 
 // ─── Load chat history ───
 async function loadChatHistory() {
-  if (!chatEmail) return;
+  if (!chatEmail) {
+    console.log('[CHAT] loadChatHistory skipped - no email');
+    return;
+  }
 
   const messages = document.getElementById('chat-messages');
-  if (!messages) return;
+  if (!messages) {
+    console.log('[CHAT] loadChatHistory skipped - no messages div');
+    return;
+  }
 
   try {
     const orderId = window._chatOrderId || '';
     let url = `/api/messages/thread?email=${encodeURIComponent(chatEmail)}`;
     if (orderId) url += `&order_id=${encodeURIComponent(orderId)}`;
 
+    console.log('[CHAT] Loading chat history from:', url);
     const res = await fetch(url);
+    
+    if (!res.ok) {
+      console.error('[CHAT] Failed to load chat history:', res.status, res.statusText);
+      return;
+    }
+
     const json = await res.json();
 
-    if (json.status !== 'success') return;
+    if (json.status !== 'success') {
+      console.error('[CHAT] Invalid response:', json);
+      return;
+    }
 
     const thread = json.data || [];
-    console.log('[CHAT] loadChatHistory thread length', thread.length, 'orderId', window._chatOrderId);
+    console.log('[CHAT] loadChatHistory thread length', thread.length, 'lastMessageCount', lastMessageCount, 'orderId', window._chatOrderId);
 
     // If there are no backend messages yet, show a placeholder and keep quick actions.
     if (thread.length === 0 && window._chatOrderId) {

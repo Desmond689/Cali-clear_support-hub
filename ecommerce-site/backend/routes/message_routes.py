@@ -44,7 +44,22 @@ def create_message():
     db.session.add(msg)
     db.session.commit()
 
-    # Notify admin of new message
+    # Emit real-time notification to admin via SocketIO
+    try:
+        socketio.emit('new_user_message', {
+            'email': email,
+            'name': name,
+            'message': message,
+            'message_type': message_type,
+            'order_id': order_id,
+            'timestamp': msg.created_at.isoformat(),
+            'id': msg.id
+        }, room='admin')
+        print(f"[SOCKETIO] Emitted new_user_message to admin for {email}")
+    except Exception as e:
+        print(f"[SOCKETIO] Error emitting admin notification: {e}")
+
+    # Notify admin of new message via email
     send_email(
         "support@caliclear.shop",
         f"New message from {name}",
