@@ -99,7 +99,11 @@ def handle_join_chat(data):
     email = data.get('email')
     if email:
         join_room(email)
-        emit('joined', {'status': 'success'})
+        print(f"[SOCKETIO] User {email} joined room")
+        emit('joined', {'status': 'success', 'room': email})
+    else:
+        print("[SOCKETIO] join_chat called without email")
+        emit('joined', {'status': 'error', 'message': 'Email required'})
 
 @socketio.on('join_admin')
 def handle_join_admin():

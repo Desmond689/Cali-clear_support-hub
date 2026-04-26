@@ -168,6 +168,14 @@ function initChat() {
       }
     });
     
+    socket.on('joined', (data) => {
+      console.log('[CHAT] Joined room successfully:', data);
+    });
+    
+    socket.on('joined_admin', (data) => {
+      console.log('[CHAT] Admin join confirmation:', data);
+    });
+    
     // Listen for new messages from admin - both 'new_message' and 'admin_reply' events
     socket.on('new_message', (data) => {
       console.log('[CHAT] New message received via new_message event:', data);
@@ -184,23 +192,7 @@ function initChat() {
     function handleAdminMessage(data) {
       if (!chatEmail) return;
       
-      const message = data.message || data.admin_reply || '';
-      const timestamp = data.timestamp || data.replied_at || new Date().toISOString();
-      
-      // Create message object for rendering
-      const msg = {
-        admin_reply: message,
-        replied_at: timestamp
-      };
-      
-      // Append the admin reply directly to chat
-      const messagesDiv = document.getElementById('chat-messages');
-      if (messagesDiv) {
-        messagesDiv.innerHTML += renderAdminReply(msg);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        lastMessageCount++; // Increment count to avoid unnecessary reloads
-        console.log('[CHAT] Admin message displayed');
-      }
+      console.log('[CHAT] Processing admin message for email:', chatEmail);
       
       // Show notification if chat is closed
       const panel = document.getElementById('chat-panel');
@@ -220,6 +212,12 @@ function initChat() {
           });
         }
       }
+      
+      // Force reload chat history from database to ensure we get the latest message
+      // Reset lastMessageCount to force a full reload on next poll
+      lastMessageCount = -1;
+      // Immediately load chat history to show the message in real-time
+      loadChatHistory();
     }
   } else if (typeof io === 'undefined') {
     console.warn('[CHAT] SocketIO not loaded, real-time features disabled');
