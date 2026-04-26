@@ -108,7 +108,7 @@ class AdminVerificationToken(db.Model):
 class Message(db.Model):
     """Customer support messages from chat widget"""
     id = db.Column(db.Integer, primary_key=True)
-    customer_email = db.Column(db.String(120), nullable=False)
+    customer_email = db.Column(db.String(120), nullable=False, index=True)
     customer_name = db.Column(db.String(100))
     message = db.Column(db.Text, nullable=False)
     message_type = db.Column(db.String(30), default='text')  # text, order, payment_details, proof, bot, status_update
@@ -116,8 +116,82 @@ class Message(db.Model):
     status = db.Column(db.String(20), default='new')  # new, read, replied
     admin_reply = db.Column(db.Text)
     screenshot_data = db.Column(db.Text)  # Base64 screenshot for proof messages
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     replied_at = db.Column(db.DateTime)
+    
+    # 2. Message Read Receipts
+    is_read = db.Column(db.Boolean, default=False)
+    read_at = db.Column(db.DateTime)
+    
+    # 3. Message Editing
+    edited_at = db.Column(db.DateTime)
+    edited_by = db.Column(db.String(50))  # 'admin' or 'customer'
+    original_message = db.Column(db.Text)  # Store original for audit trail
+    edit_count = db.Column(db.Integer, default=0)
+    
+    # 4. File Upload Support
+    attachment_type = db.Column(db.String(50))  # pdf, docx, image, invoice, etc
+    attachment_path = db.Column(db.String(255))  # Path to uploaded file
+    attachment_size = db.Column(db.Integer)  # File size in bytes
+    attachment_name = db.Column(db.String(255))  # Original filename
+    
+    # 10. Message Reactions
+    reactions = db.Column(db.Text)  # JSON: {'👍': ['email1', 'email2'], '❤️': ['email3']}
+    
+    # 14. Conversation Pinning
+    is_pinned = db.Column(db.Boolean, default=False)
+    pinned_at = db.Column(db.DateTime)
+    pinned_by = db.Column(db.String(120))  # Admin email who pinned it
+    
+    # 15. Message Delete/Archive
+    is_archived = db.Column(db.Boolean, default=False)
+    archived_at = db.Column(db.DateTime)
+    
+    # Relationships
+    attachments = db.relationship('MessageAttachment', backref='message', cascade='all, delete-orphan')
+
+
+class MessageAttachment(db.Model):
+    """File attachments for messages"""
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
+    file_path = db.Column(db.String(255), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_type = db.Column(db.String(50))  # pdf, docx, jpg, png, etc
+    file_size = db.Column(db.Integer)  # bytes
+    upload_by = db.Column(db.String(120))  # customer or admin email
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class AdminStatus(db.Model):
+    """Track admin online status"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_email = db.Column(db.String(120), unique=True, nullable=False)
+    is_online = db.Column(db.Boolean, default=False)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class FAQItem(db.Model):
+    """Auto-reply FAQ for common questions"""
+    id = db.Column(db.Integer, primary_key=True)
+    keywords = db.Column(db.Text, nullable=False)  # comma-separated or JSON list
+    response = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(50))  # refund, shipping, payment, etc
+    is_active = db.Column(db.Boolean, default=True)
+    priority = db.Column(db.Integer, default=0)  # higher = checked first
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MessageSearchIndex(db.Model):
+    """Search index for messages"""
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False, unique=True)
+    search_text = db.Column(db.Text)  # Combined searchable text
+    customer_email = db.Column(db.String(120), db.ForeignKey('message.customer_email'))
+    order_id = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
 class PaymentMethod(db.Model):
     """Configurable payment methods (Venmo, Cash App, PayPal, Bank Transfer)"""

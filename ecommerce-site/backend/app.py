@@ -6,7 +6,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from datetime import timedelta
+from datetime import timedelta, datetime
 from dotenv import load_dotenv
 from config import Config
 from database.db import db
@@ -137,6 +137,36 @@ def handle_send_message(data):
         }, room='admin')
         # Acknowledge to user
         emit('message_sent', {'id': msg.id})
+
+# 1. Typing Indicator
+@socketio.on('typing')
+def handle_typing(data):
+    email = data.get('email')
+    is_typing = data.get('is_typing', True)
+    emit('user_typing', {
+        'email': email,
+        'is_typing': is_typing,
+        'timestamp': datetime.utcnow().isoformat()
+    }, room='admin')
+
+# 5. Admin Online Status
+@socketio.on('admin_status')
+def handle_admin_status(data):
+    admin_email = data.get('email')
+    is_online = data.get('is_online', True)
+    from database.models import AdminStatus
+    status = AdminStatus.query.filter_by(admin_email=admin_email).first()
+    if not status:
+        status = AdminStatus(admin_email=admin_email)
+        db.session.add(status)
+    status.is_online = is_online
+    status.last_activity = datetime.utcnow()
+    db.session.commit()
+    # Broadcast to all users
+    emit('admin_online_status', {
+        'is_online': is_online,
+        'admin_email': admin_email
+    }, broadcast=True)
 
 # For admin replies, we'll emit from the route
 

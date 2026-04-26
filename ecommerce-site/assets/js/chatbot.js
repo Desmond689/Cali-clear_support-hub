@@ -191,6 +191,45 @@ function initChat() {
       console.log('[CHAT] New message acknowledgment:', data);
     });
     
+    // NEW: Listen for user typing indicator
+    socket.on('user_typing', (data) => {
+      if (data.is_typing) {
+        console.log('[CHAT] User typing...', data.email);
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) indicator.style.display = 'block';
+      } else {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) indicator.style.display = 'none';
+      }
+    });
+    
+    // NEW: Admin online status
+    socket.on('admin_online_status', (data) => {
+      console.log('[CHAT] Admin status:', data.is_online ? 'Online' : 'Offline');
+      const statusEl = document.getElementById('admin-status');
+      if (statusEl) {
+        statusEl.innerHTML = `<span class="status-badge ${data.is_online ? 'online' : 'offline'}">
+          ${data.is_online ? '🟢 Support agent online' : '⚪ Support offline'}
+        </span>`;
+      }
+    });
+    
+    // NEW: Message edited
+    socket.on('message_edited', (data) => {
+      console.log('[CHAT] Message edited:', data.message_id);
+      const msgEl = document.querySelector(`[data-msg-id="${data.message_id}"]`);
+      if (msgEl) {
+        const textEl = msgEl.querySelector('.chat-bubble-message');
+        if (textEl) {
+          textEl.innerHTML = escapeHtml(data.new_text);
+          const editBadge = document.createElement('span');
+          editBadge.className = 'edit-badge';
+          editBadge.textContent = '(edited)';
+          textEl.appendChild(editBadge);
+        }
+      }
+    });
+    
     // Listen for new messages from admin - both 'new_message' and 'admin_reply' events
     socket.on('new_message', (data) => {
       console.log('[CHAT] New message received via new_message event:', data);
@@ -368,6 +407,66 @@ const newBubble = document.getElementById('chat-bubble');
     }
     e.target.value = '';
   });
+
+  // NEW: File attachment handler
+  const attachmentBtn = document.getElementById('chat-attachment-btn');
+  const fileInput = document.getElementById('chat-file-input');
+  if (attachmentBtn && fileInput) {
+    attachmentBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      if (!chatEmail) {
+        chatEmail = prompt('Please enter your email:') || 'anonymous@example.com';
+        chatName = prompt('What is your name?') || 'Guest';
+        localStorage.setItem('user_email', chatEmail);
+        localStorage.setItem('user_name', chatName);
+      }
+      
+      // First send a message indicating file is being uploaded
+      appendUserMessage(`📎 Uploading file: ${file.name}`);
+      
+      // Then upload the file with first message
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('email', chatEmail);
+      
+      try {
+        const res = await fetch('/api/messages/0/attachment', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+          console.log('[CHAT] File uploaded:', data.data);
+          appendBotMessage(`✅ File received: ${file.name}`);
+          lastMessageCount = -1;
+          loadChatHistory();
+        }
+      } catch (e) {
+        console.error('[CHAT] Upload error:', e);
+        appendBotMessage('❌ File upload failed');
+      }
+      
+      fileInput.value = '';
+    });
+  }
+
+  // NEW: Send button handler
+  const sendBtn = document.getElementById('chat-send-btn');
+  if (sendBtn) {
+    sendBtn.addEventListener('click', () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+  }
+
+  // NEW: Typing indicator on input
+  input.addEventListener('input', () => {
+    sendTypingIndicator();
+  });
+
 
   // Attach quick triggers to common checkout/buy buttons
   attachQuickChatTriggers();
@@ -547,12 +646,52 @@ function renderBotMessage(msg) {
 function renderAdminReply(msg) {
   const text = escapeHtml(msg.admin_reply);
   const time = formatChatTime(msg.replied_at);
-  return `<div class="chat-message chat-message-admin" style="text-align:right;margin:8px 0;">
-    <div style="background:#4caf50;color:#fff;padding:10px 14px;border-radius:12px 12px 0 12px;display:inline-block;max-width:75%;word-wrap:break-word;font-size:13px;text-align:left;">
+  
+  // NEW FEATURES: Read receipt, reactions, edit, delete, attachments
+  let readReceipt = '';
+  if (msg.is_read) {
+    readReceipt = '<span class="read-receipt" style="font-size:10px;color:#4caf50;">✓✓ Read</span>';
+  }
+  
+  let attachmentUI = '';
+  if (msg.attachment_path) {
+    const fileName = msg.attachment_name || 'Download';
+    attachmentUI = `<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,0.1);border-radius:6px;">
+      📎 <a href="${msg.attachment_path}" download style="color:#fff;text-decoration:none;">${escapeHtml(fileName)}</a>
+    </div>`;
+  }
+  
+  let reactionsUI = '';
+  if (msg.reactions && typeof msg.reactions === 'object' && Object.keys(msg.reactions).length > 0) {
+    reactionsUI = '<div class="message-reactions" style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">';
+    for (const [emoji, users] of Object.entries(msg.reactions)) {
+      reactionsUI += `<span class="reaction-badge" style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:12px;font-size:11px;" title="${users.join(', ')}">${emoji} ${users.length}</span>`;
+    }
+    reactionsUI += '</div>';
+  }
+  
+  let editedBadge = '';
+  if (msg.edited_at) {
+    editedBadge = `<span style="font-size:10px;color:rgba(255,255,255,0.6);margin-left:8px;">(edited ${msg.edit_count || 1} times)</span>`;
+  }
+  
+  return `<div class="chat-message chat-message-admin" data-msg-id="${msg.id}" style="text-align:right;margin:8px 0;">
+    <div style="background:#4caf50;color:#fff;padding:10px 14px;border-radius:12px 12px 0 12px;display:inline-block;max-width:75%;word-wrap:break-word;font-size:13px;text-align:left;position:relative;">
       <span style="font-size:11px;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">🧑‍💼 Admin</span>
-      ${text}
+      <div class="chat-bubble-message">${text}</div>
+      ${editedBadge}
+      ${attachmentUI}
+      ${reactionsUI}
+      <div style="font-size:10px;color:rgba(255,255,255,0.8);margin-top:4px;display:flex;gap:12px;justify-content:space-between;align-items:center;">
+        <span>${time}</span>
+        ${readReceipt}
+        <div style="display:flex;gap:6px;">
+          <button onclick="addReaction(${msg.id}, '👍')" style="background:none;border:none;color:#fff;cursor:pointer;font-size:12px;padding:2px 4px;">👍</button>
+          <button onclick="addReaction(${msg.id}, '❤️')" style="background:none;border:none;color:#fff;cursor:pointer;font-size:12px;padding:2px 4px;">❤️</button>
+          <button onclick="markMessageAsRead(${msg.id})" style="background:none;border:none;color:#fff;cursor:pointer;font-size:12px;padding:2px 4px;">✓</button>
+        </div>
+      </div>
     </div>
-    <div style="font-size:11px;color:#666;margin-top:3px;text-align:right;">${time}</div>
   </div>`;
 }
 
@@ -740,6 +879,123 @@ function appendBotMessage(text) {
       <div class="time">${formatChatTime(new Date().toISOString())}</div>
     </div>`);
   messages.scrollTop = messages.scrollHeight;
+}
+
+// ============ NEW FEATURES ============
+
+// 1. Typing Indicator
+let typingTimeout;
+function sendTypingIndicator() {
+  if (socket && socket.connected && chatEmail) {
+    socket.emit('typing', { email: chatEmail, is_typing: true });
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      socket.emit('typing', { email: chatEmail, is_typing: false });
+    }, 3000);
+  }
+}
+
+// 2. Message Read Receipts
+function markMessageAsRead(messageId) {
+  fetch(`/api/messages/${messageId}/read`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(j => {
+      if (j.status === 'success') {
+        const msgEl = document.querySelector(`[data-msg-id="${messageId}"]`);
+        if (msgEl) {
+          msgEl.classList.add('message-read');
+          const indicator = msgEl.querySelector('.read-receipt');
+          if (indicator) indicator.textContent = '✓✓';
+        }
+      }
+    })
+    .catch(e => console.error('[CHAT] Error marking as read:', e));
+}
+
+// 6. Auto FAQ Bot
+async function checkFAQ(messageText) {
+  try {
+    const res = await fetch('/api/messages/faq/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: messageText })
+    });
+    const data = await res.json();
+    
+    if (data.status === 'success' && data.data.matched) {
+      appendBotMessage(data.data.response);
+      return true;
+    }
+  } catch (e) {
+    console.error('[CHAT] FAQ check error:', e);
+  }
+  return false;
+}
+
+// 4. File Upload
+async function uploadAttachment(messageId, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('email', chatEmail);
+  
+  try {
+    const res = await fetch(`/api/messages/${messageId}/attachment`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    
+    if (data.status === 'success') {
+      console.log('[CHAT] File uploaded:', data.data);
+      return data.data;
+    } else {
+      console.error('[CHAT] Upload failed:', data.message);
+    }
+  } catch (e) {
+    console.error('[CHAT] Upload error:', e);
+  }
+}
+
+// 10. Message Reactions
+function addReaction(messageId, emoji) {
+  fetch(`/api/messages/${messageId}/reaction`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ emoji, email: chatEmail })
+  })
+    .then(r => r.json())
+    .then(j => {
+      if (j.status === 'success') {
+        const msgEl = document.querySelector(`[data-msg-id="${messageId}"]`);
+        if (msgEl) {
+          const reactionEl = msgEl.querySelector('.message-reactions');
+          if (!reactionEl) {
+            const newReactionEl = document.createElement('div');
+            newReactionEl.className = 'message-reactions';
+            msgEl.appendChild(newReactionEl);
+          }
+          updateReactionDisplay(msgEl, j.data.reactions);
+        }
+      }
+    })
+    .catch(e => console.error('[CHAT] Reaction error:', e));
+}
+
+function updateReactionDisplay(msgEl, reactions) {
+  let reactionEl = msgEl.querySelector('.message-reactions');
+  if (!reactionEl) {
+    reactionEl = document.createElement('div');
+    reactionEl.className = 'message-reactions';
+    msgEl.appendChild(reactionEl);
+  }
+  
+  reactionEl.innerHTML = Object.entries(reactions).map(([emoji, users]) =>
+    `<span class="reaction-badge" title="${users.join(', ')}">${emoji} ${users.length}</span>`
+  ).join('');
 }
 
 function escapeHtml(text) {

@@ -1233,11 +1233,22 @@
         <div style="display:grid;grid-template-columns:280px 1fr 300px;gap:20px;height:620px;">
           <!-- Conversation List -->
           <div style="background:#252525;border-radius:12px;overflow-y:auto;border:1px solid #333;">
-            <div style="padding:15px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:600;">Conversations</span>
-              <button onclick="markAllNotificationsRead()" style="background:none;border:none;color:#ff6f61;cursor:pointer;font-size:12px;" title="Mark all read">Mark Read</button>
+            <div style="padding:15px;border-bottom:1px solid #333;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-weight:600;">Conversations</span>
+                <button onclick="markAllNotificationsRead()" style="background:none;border:none;color:#ff6f61;cursor:pointer;font-size:12px;" title="Mark all read">Mark Read</button>
+              </div>
+              <!-- NEW: Search and filter -->
+              <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <input id="message-search-input" type="text" placeholder="Search messages..." style="flex:1;padding:8px;background:#1e1e1e;border:1px solid #333;border-radius:6px;color:#fff;font-size:12px;" onkeyup="searchMessages(this.value)">
+                <button onclick="toggleMessageFilter()" style="background:none;border:1px solid #333;color:#888;cursor:pointer;border-radius:6px;padding:6px 12px;font-size:12px;">🔽 Filter</button>
+              </div>
+              <!-- NEW: Unread badge -->
+              <div style="font-size:11px;color:#ff6f61;margin-bottom:10px;">
+                <span id="unread-count" style="font-weight:600;">0</span> unread messages
+              </div>
             </div>
-            <div id="conversations-list" style="overflow-y:auto;max-height:560px;">
+            <div id="conversations-list" style="overflow-y:auto;max-height:520px;">
               <div style="padding:20px;text-align:center;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
           </div>
@@ -1245,20 +1256,39 @@
           <!-- Chat View -->
           <div style="background:#252525;border-radius:12px;display:flex;flex-direction:column;border:1px solid #333;">
             <div style="padding:15px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;" id="chat-view-header">
-              <span>Select a conversation</span>
-              <span id="chat-order-badge" style="display:none;background:#ff6f61;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;" onclick="toggleOrderPanel()"></span>
+              <div>
+                <span>Select a conversation</span>
+                <!-- NEW: Admin online status toggle -->
+                <div style="font-size:11px;color:#4caf50;margin-top:4px;">
+                  <button id="admin-status-toggle" onclick="toggleAdminStatus()" style="background:none;border:none;color:#4caf50;cursor:pointer;font-size:12px;">🟢 Online</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <!-- NEW: Message features buttons -->
+                <button onclick="showSearchPanel()" title="Search messages" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;">🔍</button>
+                <button onclick="showPinnedMessages()" title="Show pinned messages" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;">📌</button>
+                <button onclick="showFAQPanel()" title="FAQ Management" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;">❓</button>
+                <span id="chat-order-badge" style="display:none;background:#ff6f61;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;" onclick="toggleOrderPanel()"></span>
+              </div>
             </div>
             <div id="chat-view-messages" style="flex:1;overflow-y:auto;padding:15px;display:flex;align-items:center;justify-content:center;color:#888;">
               No conversation selected
             </div>
             <!-- Quick Actions Bar -->
             <div id="chat-quick-actions" style="padding:6px 10px;border-top:1px solid #333;display:none;gap:6px;flex-wrap:wrap;">
-              <button onclick="sendQuickPaymentInstructions()" style="background:#2196f3;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">?? Send Payment Details</button>
-              <button onclick="verifyPaymentFromChat()" style="background:#4caf50;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">? Verify Payment</button>
-              <button onclick="rejectPaymentFromChat()" style="background:#f44336;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">? Reject Payment</button>
-              <button onclick="sendReminderFromChat()" style="background:#ff9800;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">? Send Reminder</button>
+              <button onclick="sendQuickPaymentInstructions()" style="background:#2196f3;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">💳 Send Payment Details</button>
+              <button onclick="verifyPaymentFromChat()" style="background:#4caf50;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">✅ Verify Payment</button>
+              <button onclick="rejectPaymentFromChat()" style="background:#f44336;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">❌ Reject Payment</button>
+              <button onclick="sendReminderFromChat()" style="background:#ff9800;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;">⏰ Send Reminder</button>
+              <!-- NEW: Edit and delete message buttons -->
+              <button id="edit-message-btn" onclick="editSelectedMessage()" style="background:#9c27b0;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;display:none;">✏️ Edit</button>
+              <button id="pin-message-btn" onclick="pinSelectedMessage()" style="background:#ff9800;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;display:none;">📌 Pin</button>
+              <button id="delete-message-btn" onclick="deleteSelectedMessage()" style="background:#f44336;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;display:none;">🗑️ Delete</button>
             </div>
-            <div style="padding:10px;border-top:1px solid #333;display:flex;gap:10px;">
+            <div style="padding:10px;border-top:1px solid #333;display:flex;gap:10px;align-items:center;">
+              <!-- NEW: File attachment button -->
+              <input id="admin-file-input" type="file" style="display:none;" accept="image/*,application/pdf,.doc,.docx">
+              <button onclick="document.getElementById('admin-file-input').click()" title="Attach file" style="background:none;border:1px solid #333;color:#888;cursor:pointer;border-radius:6px;padding:8px;font-size:14px;">📎</button>
               <input id="admin-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:10px;background:#1e1e1e;border:1px solid #333;border-radius:8px;color:#fff;" onkeydown="if(event.key==='Enter')sendAdminReply()">
               <button onclick="sendAdminReply()" class="btn btn-success" style="width:100px;"><i class="fas fa-send"></i> Send</button>
             </div>
@@ -4076,6 +4106,267 @@
       const mins = String(date.getMinutes()).padStart(2, '0');
       return `${hours}:${mins}`;
     }
+
+    // ============ NEW FEATURES ============
+
+    // 9. Unread message badge
+    async function updateUnreadCount() {
+      try {
+        const res = await apiRequest('/messages/unread-count');
+        const count = res.data.unread_count || 0;
+        const badge = document.getElementById('unread-count');
+        if (badge) badge.textContent = count;
+      } catch (e) {
+        console.error('Error getting unread count:', e);
+      }
+    }
+
+    // 2. Admin online status toggle
+    async function toggleAdminStatus() {
+      const btn = document.getElementById('admin-status-toggle');
+      const isOnline = btn.textContent.includes('Online');
+      
+      try {
+        await apiRequest('/admin/status', {
+          method: 'POST',
+          body: { is_online: !isOnline }
+        });
+        
+        btn.textContent = !isOnline ? '🟢 Online' : '⚪ Offline';
+        btn.style.color = !isOnline ? '#4caf50' : '#888';
+        showNotification(`Status: ${!isOnline ? 'Online' : 'Offline'}`, 'info');
+        
+        // Broadcast to all connected clients via socket
+        if (typeof io !== 'undefined' && adminSocket) {
+          adminSocket.emit('admin_status_changed', { is_online: !isOnline });
+        }
+      } catch (e) {
+        showNotification('Error updating status: ' + e.message, 'error');
+      }
+    }
+
+    // 3. Edit message
+    function editSelectedMessage() {
+      if (!lastMsg) { showNotification('No message selected', 'error'); return; }
+      const newText = prompt('Edit message:', lastMsg.message);
+      if (newText === null) return;
+      
+      fetch(`/api/messages/${lastMsg.id}/edit`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_text: newText })
+      })
+        .then(r => r.json())
+        .then(j => {
+          if (j.status === 'success') {
+            showNotification('Message edited', 'success');
+            renderConversation(currentConversationEmail);
+          }
+        })
+        .catch(e => showNotification('Edit failed: ' + e.message, 'error'));
+    }
+
+    // 4. File attachment
+    document.getElementById('admin-file-input')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file || !lastMsg) return;
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('email', 'admin@cali-clear.com');
+      
+      try {
+        const res = await fetch(`/api/messages/${lastMsg.id}/attachment`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+          showNotification(`File uploaded: ${file.name}`, 'success');
+          renderConversation(currentConversationEmail);
+        }
+      } catch (e) {
+        showNotification('Upload failed: ' + e.message, 'error');
+      }
+      
+      e.target.value = '';
+    });
+
+    // 7. Message search
+    async function searchMessages(query) {
+      if (!query) { loadMessages(); return; }
+      
+      try {
+        const res = await apiRequest(`/messages/search?q=${encodeURIComponent(query)}&limit=50`);
+        displaySearchResults(res.data || []);
+      } catch (e) {
+        console.error('Search error:', e);
+      }
+    }
+
+    function displaySearchResults(results) {
+      const list = document.getElementById('conversations-list');
+      if (results.length === 0) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">No results found</div>';
+        return;
+      }
+      
+      let html = '';
+      results.forEach(msg => {
+        html += `<div onclick="selectConversation('${escapeForHtmlAttr(msg.email)}')" style="padding:12px;border-bottom:1px solid #333;cursor:pointer;hover:background:#333;">
+          <div style="font-size:12px;font-weight:600;">${escapeHtml(msg.email)}</div>
+          <div style="font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(msg.message.substring(0, 50))}</div>
+        </div>`;
+      });
+      list.innerHTML = html;
+    }
+
+    // 11. AI suggestions
+    async function getSuggestions() {
+      if (!lastMsg) return;
+      
+      try {
+        const res = await apiRequest(`/messages/${lastMsg.id}/suggestions`);
+        if (res.data && res.data.length > 0) {
+          const suggestions = res.data.map(s => `• ${s}`).join('\n');
+          showNotification('Suggested replies:\n' + suggestions, 'info');
+        }
+      } catch (e) {
+        console.error('Suggestions error:', e);
+      }
+    }
+
+    // 14. Pin message
+    async function pinSelectedMessage() {
+      if (!lastMsg) { showNotification('No message selected', 'error'); return; }
+      
+      try {
+        const res = await apiRequest(`/messages/${lastMsg.id}/pin`, {
+          method: 'PUT',
+          body: { pinned_by: 'admin@cali-clear.com' }
+        });
+        
+        if (res.status === 'success') {
+          showNotification('Message pinned', 'success');
+          renderConversation(currentConversationEmail);
+        }
+      } catch (e) {
+        showNotification('Pin failed: ' + e.message, 'error');
+      }
+    }
+
+    // Show pinned messages
+    async function showPinnedMessages() {
+      try {
+        const res = await apiRequest('/messages/pinned?limit=20');
+        const pinned = res.data || [];
+        
+        if (pinned.length === 0) {
+          showNotification('No pinned messages', 'info');
+          return;
+        }
+        
+        const list = pinned.map(m => `📌 [${m.email}] ${m.message.substring(0, 60)}`).join('\n\n');
+        showNotification('Pinned messages:\n' + list, 'info');
+      } catch (e) {
+        console.error('Pinned messages error:', e);
+      }
+    }
+
+    // Delete message
+    async function deleteSelectedMessage() {
+      if (!lastMsg || !confirm('Delete this message?')) return;
+      
+      try {
+        const res = await apiRequest(`/messages/${lastMsg.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (res.status === 'success') {
+          showNotification('Message deleted', 'success');
+          renderConversation(currentConversationEmail);
+        }
+      } catch (e) {
+        showNotification('Delete failed: ' + e.message, 'error');
+      }
+    }
+
+    // FAQ Management panel
+    async function showFAQPanel() {
+      try {
+        const res = await apiRequest('/messages/faq?limit=50');
+        const faqs = res.data || [];
+        
+        let html = '<div style="padding:15px;">';
+        html += '<input type="text" id="faq-keyword" placeholder="Keyword..." style="width:100%;padding:8px;margin-bottom:10px;background:#1e1e1e;border:1px solid #333;color:#fff;border-radius:6px;">';
+        html += '<input type="text" id="faq-response" placeholder="Response..." style="width:100%;padding:8px;margin-bottom:10px;background:#1e1e1e;border:1px solid #333;color:#fff;border-radius:6px;">';
+        html += '<button onclick="addFAQItem()" style="width:100%;padding:8px;background:#4caf50;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-bottom:15px;">➕ Add FAQ</button>';
+        
+        html += '<div style="border-top:1px solid #333;padding-top:15px;max-height:400px;overflow-y:auto;">';
+        faqs.forEach((faq, i) => {
+          html += `<div style="padding:10px;border-bottom:1px solid #333;font-size:12px;">
+            <div style="font-weight:600;color:#ff6f61;">${escapeHtml(faq.keywords)}</div>
+            <div style="color:#aaa;margin:5px 0;">${escapeHtml(faq.response)}</div>
+            <button onclick="deleteFAQItem(${faq.id})" style="background:none;border:none;color:#f44336;cursor:pointer;font-size:11px;">🗑️ Delete</button>
+          </div>`;
+        });
+        html += '</div></div>';
+        
+        showNotification(html, 'info');
+      } catch (e) {
+        console.error('FAQ error:', e);
+      }
+    }
+
+    async function addFAQItem() {
+      const keyword = document.getElementById('faq-keyword')?.value || '';
+      const response = document.getElementById('faq-response')?.value || '';
+      
+      if (!keyword || !response) {
+        showNotification('Fill all fields', 'error');
+        return;
+      }
+      
+      try {
+        await apiRequest('/messages/faq', {
+          method: 'POST',
+          body: { keywords: keyword, response, category: 'General', priority: 5, is_active: true }
+        });
+        showNotification('FAQ added!', 'success');
+        showFAQPanel();
+      } catch (e) {
+        showNotification('Error: ' + e.message, 'error');
+      }
+    }
+
+    async function deleteFAQItem(id) {
+      if (!confirm('Delete FAQ?')) return;
+      try {
+        await apiRequest(`/messages/faq/${id}`, { method: 'DELETE' });
+        showNotification('FAQ deleted', 'success');
+        showFAQPanel();
+      } catch (e) {
+        showNotification('Error: ' + e.message, 'error');
+      }
+    }
+
+    // Show search panel
+    function showSearchPanel() {
+      const input = document.getElementById('message-search-input');
+      if (input) input.focus();
+    }
+
+    // Message filter toggle
+    function toggleMessageFilter() {
+      showNotification('Filter options:\n• Unread\n• With attachments\n• Reactions\n• Pinned', 'info');
+    }
+
+    // Initialize new features
+    document.addEventListener('DOMContentLoaded', () => {
+      updateUnreadCount();
+      setInterval(updateUnreadCount, 30000); // Update every 30s
+    });
   </script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </body>

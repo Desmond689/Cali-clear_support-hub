@@ -263,11 +263,51 @@
   <div id="chat-bubble" class="chat-bubble" aria-label="Open chat support">Chat with us</div>
   <div id="chat-panel" class="chat-panel hidden">
     <div class="chat-header">
-      <span>Support</span>
-      <button id="chat-close" class="chat-close" aria-label="Close chat">×</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+        <div>
+          <span>Support</span>
+          <div id="admin-status" style="font-size:11px;color:#4caf50;margin-top:4px;">🟢 Support agent online</div>
+        </div>
+        <button id="chat-close" class="chat-close" aria-label="Close chat">×</button>
+      </div>
     </div>
     <div id="chat-messages" class="chat-messages"></div>
-    <input id="chat-input" class="chat-input" placeholder="Type a message…" aria-label="Chat input">
+    <div id="typing-indicator" style="display:none;padding:10px;font-size:12px;color:#999;font-style:italic;">
+      <span style="display:inline-block;animation:pulse 1.5s infinite;">●</span>
+      <span style="display:inline-block;animation:pulse 1.5s infinite;animation-delay:0.2s;">●</span>
+      <span style="display:inline-block;animation:pulse 1.5s infinite;animation-delay:0.4s;">●</span>
+      Admin is typing...
+    </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+      }
+      .message-reactions {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+      }
+      .reaction-badge {
+        background: rgba(0,0,0,0.1);
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .edit-badge {
+        font-size: 10px;
+        color: #999;
+        margin-left: 8px;
+      }
+    </style>
+    <div style="display:flex;gap:8px;padding:10px;background:#f5f5f5;border-top:1px solid #e0e0e0;">
+      <input id="chat-file-input" type="file" style="display:none;" accept="image/*,application/pdf,.doc,.docx">
+      <button id="chat-attachment-btn" style="background:none;border:none;cursor:pointer;font-size:18px;" title="Attach file">📎</button>
+      <input id="chat-input" class="chat-input" placeholder="Type a message…" aria-label="Chat input" style="flex:1;">
+      <button id="chat-send-btn" style="background:none;border:none;cursor:pointer;font-size:18px;" title="Send message">📤</button>
+    </div>
   </div>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="assets/js/chatbot.js"></script>

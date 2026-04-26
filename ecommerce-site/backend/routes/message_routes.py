@@ -532,3 +532,434 @@ def get_proof_image(msg_id):
         return error_response("No screenshot attached", 404)
 
     return jsonify({"status": "success", "screenshot_data": screenshot})
+
+
+# ============ NEW FEATURES ============
+
+# 2. Message Read Receipts
+@bp.route("/<int:msg_id>/read", methods=["PUT"])
+def mark_message_read(msg_id):
+    """Mark message as read"""
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    msg.is_read = True
+    msg.read_at = datetime.utcnow()
+    db.session.commit()
+    
+    return success_response(message="Message marked as read")
+
+
+# 3. Message Editing
+@bp.route("/<int:msg_id>/edit", methods=["PUT"])
+@admin_required
+def edit_message(msg_id):
+    """Admin edits their reply"""
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    data = request.json or {}
+    new_text = data.get("text", "").strip()
+    
+    if not new_text:
+        return error_response("Text is required", 400)
+    
+    # Store original if not already stored
+    if not msg.original_message and msg.admin_reply:
+        msg.original_message = msg.admin_reply
+    
+    msg.admin_reply = new_text
+    msg.edited_at = datetime.utcnow()
+    msg.edited_by = 'admin'
+    msg.edit_count = (msg.edit_count or 0) + 1
+    db.session.commit()
+    
+    # Emit edit event
+    socketio.emit('message_edited', {
+        'message_id': msg_id,
+        'new_text': new_text,
+        'edited_at': msg.edited_at.isoformat(),
+        'edit_count': msg.edit_count
+    }, room=msg.customer_email)
+    
+    return success_response(message="Message edited successfully")
+
+
+# 4. File Upload Support
+@bp.route("/<int:msg_id>/attachment", methods=["POST"])
+def upload_attachment(msg_id):
+    """Upload file attachment to a message"""
+    from werkzeug.utils import secure_filename
+    import os
+    
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    if 'file' not in request.files:
+        return error_response("No file provided", 400)
+    
+    file = request.files['file']
+    email = request.form.get('email', 'unknown')
+    
+    if file.filename == '':
+        return error_response("No file selected", 400)
+    
+    # Allowed file types
+    allowed_types = {'pdf', 'docx', 'doc', 'jpg', 'jpeg', 'png', 'gif', 'xlsx', 'xls'}
+    file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    
+    if file_ext not in allowed_types:
+        return error_response(f"File type not allowed. Allowed: {', '.join(allowed_types)}", 400)
+    
+    # Create uploads directory
+    upload_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'uploads', 'messages')
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Save file
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(upload_dir, f"{msg_id}_{datetime.utcnow().timestamp()}_{filename}")
+    file.save(file_path)
+    
+    from database.models import MessageAttachment
+    attachment = MessageAttachment(
+        message_id=msg_id,
+        file_name=filename,
+        file_type=file_ext,
+        file_size=os.path.getsize(file_path),
+        upload_by=email
+    )
+    db.session.add(attachment)
+    msg.attachment_path = file_path
+    msg.attachment_name = filename
+    msg.attachment_type = file_ext
+    msg.attachment_size = os.path.getsize(file_path)
+    db.session.commit()
+    
+    return success_response(data={"attachment_id": attachment.id, "filename": filename})
+
+
+# 6. Auto FAQ Bot
+@bp.route("/faq/check", methods=["POST"])
+def check_faq():
+    """Check if message matches FAQ"""
+    data = request.json or {}
+    message_text = data.get("message", "").lower().strip()
+    
+    from database.models import FAQItem
+    
+    faqs = FAQItem.query.filter_by(is_active=True).order_by(FAQItem.priority.desc()).all()
+    
+    for faq in faqs:
+        keywords = [k.strip().lower() for k in faq.keywords.split(',')]
+        if any(keyword in message_text for keyword in keywords):
+            return success_response(data={
+                "matched": True,
+                "faq_id": faq.id,
+                "response": faq.response,
+                "category": faq.category
+            })
+    
+    return success_response(data={"matched": False})
+
+
+# 7. Message Search
+@bp.route("/search", methods=["GET"])
+@admin_required
+def search_messages():
+    """Search messages by email, order ID, or text"""
+    query_text = request.args.get("q", "").strip()
+    search_by = request.args.get("type", "all")  # all, email, order_id, text
+    limit = int(request.args.get("limit", 50))
+    offset = int(request.args.get("offset", 0))
+    
+    if not query_text:
+        return error_response("Search query required", 400)
+    
+    query = Message.query
+    
+    if search_by in ("email", "all"):
+        query = query.filter(Message.customer_email.ilike(f"%{query_text}%"))
+    elif search_by == "order_id":
+        query = query.filter(Message.order_id.ilike(f"%{query_text}%"))
+    elif search_by == "text":
+        query = query.filter(Message.message.ilike(f"%{query_text}%"))
+    
+    total = query.count()
+    messages = query.order_by(Message.created_at.desc()).limit(limit).offset(offset).all()
+    
+    return success_response(data={
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "messages": [
+            {
+                "id": m.id,
+                "customer_email": m.customer_email,
+                "message": m.message[:100],
+                "order_id": m.order_id,
+                "created_at": m.created_at.isoformat()
+            }
+            for m in messages
+        ]
+    })
+
+
+# 8. Chat Pagination (modify existing get_thread)
+@bp.route("/thread-paginated", methods=["GET"])
+def get_thread_paginated():
+    """Get conversation thread with pagination"""
+    email = request.args.get("email", "").strip()
+    order_id = request.args.get("order_id", "").strip()
+    limit = int(request.args.get("limit", 50))
+    offset = int(request.args.get("offset", 0))
+    
+    if not email:
+        return error_response("Email is required", 400)
+    
+    query = Message.query.filter_by(customer_email=email)
+    if order_id:
+        query = query.filter(db.or_(Message.order_id == order_id, Message.order_id.is_(None)))
+    
+    total = query.count()
+    messages = query.order_by(Message.created_at.asc()).limit(limit).offset(offset).all()
+    
+    return success_response(data={
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "messages": [
+            {
+                "id": m.id,
+                "customer_email": m.customer_email,
+                "customer_name": m.customer_name,
+                "message": m.message,
+                "message_type": m.message_type,
+                "order_id": m.order_id,
+                "admin_reply": m.admin_reply,
+                "is_read": m.is_read,
+                "created_at": m.created_at.isoformat()
+            }
+            for m in messages
+        ]
+    })
+
+
+# 9. Unread Badge Count
+@bp.route("/unread-count", methods=["GET"])
+@admin_required
+def get_unread_count():
+    """Get count of unread messages"""
+    unread = db.session.query(db.func.count(Message.id)).filter(
+        Message.is_read == False,
+        Message.customer_email.isnot(None)
+    ).scalar()
+    
+    return success_response(data={"unread_count": unread or 0})
+
+
+# 10. Message Reactions
+@bp.route("/<int:msg_id>/reaction", methods=["POST"])
+def add_reaction(msg_id):
+    """Add emoji reaction to message"""
+    import json
+    
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    data = request.json or {}
+    emoji = data.get("emoji", "").strip()
+    user_email = data.get("email", "").strip()
+    
+    if not emoji or not user_email:
+        return error_response("Emoji and email required", 400)
+    
+    # Parse existing reactions
+    reactions = {}
+    if msg.reactions:
+        try:
+            reactions = json.loads(msg.reactions)
+        except:
+            reactions = {}
+    
+    # Add reaction
+    if emoji not in reactions:
+        reactions[emoji] = []
+    
+    if user_email not in reactions[emoji]:
+        reactions[emoji].append(user_email)
+    
+    msg.reactions = json.dumps(reactions)
+    db.session.commit()
+    
+    return success_response(data={"reactions": reactions})
+
+
+# 11. AI Support Suggestions
+@bp.route("/<int:msg_id>/suggestions", methods=["GET"])
+@admin_required
+def get_reply_suggestions(msg_id):
+    """Get AI-suggested reply text"""
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    # Simple keyword-based suggestions (can be enhanced with real AI)
+    message_lower = msg.message.lower()
+    
+    suggestions = []
+    if "refund" in message_lower:
+        suggestions.append("Thank you for your inquiry about a refund. Could you please provide your order ID?")
+    elif "shipping" in message_lower or "track" in message_lower:
+        suggestions.append("I'd be happy to help with tracking. What is your order number?")
+    elif "payment" in message_lower:
+        suggestions.append("Thank you for confirming payment. We'll verify it shortly and update you.")
+    elif "problem" in message_lower or "issue" in message_lower:
+        suggestions.append("I apologize for the inconvenience. Could you provide more details?")
+    else:
+        suggestions.append("Thank you for reaching out. How can I assist you today?")
+    
+    return success_response(data={"suggestions": suggestions})
+
+
+# 12. Delivery Tracking Integration
+@bp.route("/order/<order_id>/tracking", methods=["GET"])
+def get_order_tracking(order_id):
+    """Get tracking info for an order"""
+    order = Order.query.get(order_id)
+    if not order:
+        return error_response("Order not found", 404)
+    
+    tracking_info = {
+        "order_id": order_id,
+        "status": order.status,
+        "tracking_number": order.tracking_number,
+        "carrier": order.carrier,
+        "estimated_delivery": None
+    }
+    
+    # If real tracking API integration needed, add here
+    # For now, return basic info
+    
+    return success_response(data=tracking_info)
+
+
+# 14. Conversation Pinning
+@bp.route("/<int:msg_id>/pin", methods=["PUT"])
+@admin_required
+def pin_message(msg_id):
+    """Pin a message for easy access"""
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    data = request.json or {}
+    admin_email = data.get("admin_email", "")
+    
+    msg.is_pinned = True
+    msg.pinned_at = datetime.utcnow()
+    msg.pinned_by = admin_email
+    db.session.commit()
+    
+    return success_response(message="Message pinned successfully")
+
+
+@bp.route("/pinned", methods=["GET"])
+@admin_required
+def get_pinned_messages():
+    """Get all pinned messages"""
+    pinned = Message.query.filter_by(is_pinned=True).order_by(Message.pinned_at.desc()).all()
+    
+    return success_response(data=[
+        {
+            "id": m.id,
+            "customer_email": m.customer_email,
+            "message": m.message,
+            "order_id": m.order_id,
+            "pinned_by": m.pinned_by,
+            "pinned_at": m.pinned_at.isoformat()
+        }
+        for m in pinned
+    ])
+
+
+# 15. Message Delete/Archive
+@bp.route("/<int:msg_id>/archive", methods=["PUT"])
+@admin_required
+def archive_message(msg_id):
+    """Archive a message"""
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    msg.is_archived = True
+    msg.archived_at = datetime.utcnow()
+    db.session.commit()
+    
+    return success_response(message="Message archived successfully")
+
+
+@bp.route("/<int:msg_id>/restore", methods=["PUT"])
+@admin_required
+def restore_message(msg_id):
+    """Restore an archived message"""
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return error_response("Message not found", 404)
+    
+    msg.is_archived = False
+    msg.archived_at = None
+    db.session.commit()
+    
+    return success_response(message="Message restored successfully")
+
+
+# FAQ Management
+@bp.route("/faq", methods=["GET"])
+@admin_required
+def get_faqs():
+    """Get all FAQ items"""
+    from database.models import FAQItem
+    
+    faqs = FAQItem.query.filter_by(is_active=True).order_by(FAQItem.priority.desc()).all()
+    
+    return success_response(data=[
+        {
+            "id": f.id,
+            "keywords": f.keywords,
+            "response": f.response,
+            "category": f.category,
+            "priority": f.priority
+        }
+        for f in faqs
+    ])
+
+
+@bp.route("/faq", methods=["POST"])
+@admin_required
+def create_faq():
+    """Create new FAQ item"""
+    from database.models import FAQItem
+    
+    data = request.json or {}
+    keywords = data.get("keywords", "").strip()
+    response = data.get("response", "").strip()
+    category = data.get("category", "").strip()
+    priority = data.get("priority", 0)
+    
+    if not keywords or not response:
+        return error_response("Keywords and response are required", 400)
+    
+    faq = FAQItem(
+        keywords=keywords,
+        response=response,
+        category=category,
+        priority=priority
+    )
+    db.session.add(faq)
+    db.session.commit()
+    
+    return success_response(message="FAQ created successfully", data={"id": faq.id})
