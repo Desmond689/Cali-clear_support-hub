@@ -2287,13 +2287,24 @@
         if (!response.ok) {
           // Bubble up backend message
           var message = (json && (json.message || json.error)) ? (json.message || json.error) : 'Request failed';
+          
+          // Provide helpful message for admin setup issues
+          if (response.status === 403 && json && json.message && json.message.includes('admin user')) {
+            message = 'Admin setup needed: ' + message + '\n\nTo fix:\n1. In backend folder, run: python create_admin.py\n2. Then refresh this page';
+            if (typeof showNotification === 'function') {
+              showNotification(message, 'error');
+            }
+          }
+          
           throw new Error(message);
         }
         
         // Auto-unwrap Flask success_response wrapper: { status, message, data: {...} }
         return (json && json.data !== undefined) ? json.data : json;
       } catch (error) {
-        console.error('API Error:', error);
+        if (error.message && !error.message.includes('admin user')) {
+          // Don't spam console for expected errors
+        }
         throw error;
       }
     }
@@ -4113,11 +4124,14 @@
     async function updateUnreadCount() {
       try {
         const res = await apiRequest('/messages/unread-count');
-        const count = res.data.unread_count || 0;
-        const badge = document.getElementById('unread-count');
-        if (badge) badge.textContent = count;
+        if (res && res.unread_count !== undefined) {
+          const count = res.unread_count || 0;
+          const badge = document.getElementById('unread-count');
+          if (badge) badge.textContent = count;
+        }
       } catch (e) {
-        console.error('Error getting unread count:', e);
+        // Silently fail - don't spam console with errors
+        // If it's a 403, it will be handled by the global apiRequest handler
       }
     }
 

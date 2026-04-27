@@ -3,6 +3,7 @@ from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from functools import wraps
 from config import Config
 from services.auth_service import get_user_by_id
+from database.db import db
 
 
 # Bypass token for admin panel direct access
@@ -50,7 +51,23 @@ def admin_required(fn):
             try:
                 from database.models import User
                 admin = User.query.filter_by(is_admin=True).first()
-                print(f"[ADMIN_BYPASS] Query completed, admin found: {admin is not None}")
+                
+                # If no admin found, try to auto-create from environment variables
+                if not admin:
+                    from os import getenv
+                    default_email = getenv('DEFAULT_ADMIN_EMAIL')
+                    default_password = getenv('DEFAULT_ADMIN_PASSWORD')
+                    
+                    if default_email and default_password:
+                        try:
+                            admin = User(email=default_email, is_admin=True)
+                            admin.set_password(default_password)
+                            db.session.add(admin)
+                            db.session.commit()
+                            print(f"[ADMIN_BYPASS] Auto-created admin user: {default_email}")
+                        except Exception as create_err:
+                            print(f"[ADMIN_BYPASS] Failed to create admin user: {create_err}")
+                            db.session.rollback()
             except Exception as e:
                 print(f"[ADMIN_BYPASS ERROR] Database query failed: {e}")
                 import traceback
@@ -69,11 +86,11 @@ def admin_required(fn):
                 print(f"[ADMIN_BYPASS] Access granted for admin: {admin.email}")
                 return fn(*args, **kwargs)
             else:
-                print(f"[ADMIN_BYPASS] No admin user found in database")
+                print(f"[ADMIN_BYPASS] No admin user found in database and no DEFAULT_ADMIN_EMAIL configured")
                 # return 403 so the front‑end treats it as authorization failure
                 return jsonify({
                     'status': 'error',
-                    'message': 'No admin user configured. Please run create_admin or set DEFAULT_ADMIN_EMAIL/PASSWORD.'
+                    'message': 'No admin user configured. Run: python create_admin.py in backend folder, or set DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD environment variables.'
                 }), 403
         
         # Check for valid JWT token in Authorization header

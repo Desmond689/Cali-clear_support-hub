@@ -345,8 +345,8 @@ with app.app_context():
     try:
         has_admin = User.query.filter_by(is_admin=True).count() > 0
         if not has_admin:
-            default_email = os.environ.get('ADMIN_DEFAULT_EMAIL', 'admin@caliclear.local')
-            default_password = os.environ.get('ADMIN_DEFAULT_PASSWORD', 'Admin@1234')
+            default_email = os.environ.get('DEFAULT_ADMIN_EMAIL', 'admin@caliclear.local')
+            default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', 'Admin@1234')
             admin = User(email=default_email, is_admin=True)
             admin.set_password(default_password)
             db.session.add(admin)
