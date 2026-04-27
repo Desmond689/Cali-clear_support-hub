@@ -2237,7 +2237,7 @@
       
       // Always get fresh token from localStorage
       var token = localStorage.getItem('admin_token');
-      var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.includes('onrender.com');
       
       // Build headers; allow caller to override
       var headers = { 'Content-Type': 'application/json' };
